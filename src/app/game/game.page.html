@@ -1,0 +1,133 @@
+<canvas #gameCanvas></canvas>
+
+@if (dev) {
+  <div class="dev">{{ devInfo() }}</div>
+}
+
+<!-- HUD -->
+@if (mode() === 'run' || mode() === 'paused') {
+  <div class="hud">
+    <div class="hud-top">
+      <div>
+        <div class="hud-hearts">{{ heartsDisplay() }}</div>
+        <div class="hud-level">{{ STR.level }} {{ levelId() }} · {{ unitName() }}</div>
+      </div>
+      <div class="hud-center">
+        <div class="hud-score">{{ score() }}</div>
+        @if (streak() > 1) {
+          <div class="hud-streak">🔥 x{{ streak() > 5 ? 5 : streak() }}</div>
+        }
+      </div>
+      <div class="hud-right">
+        <div>🪙 {{ coins() }}</div>
+      </div>
+    </div>
+
+    @if (phrase()) {
+      <div class="hud-phrase"><small>{{ STR.translate }}</small> {{ phrase() }}</div>
+    }
+    @if (feedback(); as fb) {
+      <div class="feedback" [class.good]="fb.kind === 'good'" [class.bad]="fb.kind === 'bad'">{{ fb.text }}</div>
+    }
+    @if (powerLabel()) {
+      <div class="hud-power">{{ powerLabel() }}</div>
+    }
+    @if (droneNear()) {
+      <div class="hud-drone">{{ STR.droneWarning }}</div>
+    }
+    <button class="btn-pause" (click)="pause()">⏸</button>
+  </div>
+}
+
+<!-- Menú principal -->
+@if (mode() === 'menu') {
+  <div class="screen">
+    <div class="card">
+      <h1>{{ STR.title }}</h1>
+      <p class="sub">{{ STR.subtitle }}</p>
+      <button class="big" (click)="showLevels()">{{ STR.play }}</button>
+      <p class="sub stats">
+        @if (learnedCount() > 0) {
+          ⭐ {{ learnedCount() }} {{ STR.totalWords }}
+        } @else {
+          {{ STR.controlsDesktop }}
+        }
+      </p>
+    </div>
+  </div>
+}
+
+<!-- Selección de nivel -->
+@if (mode() === 'levels') {
+  <div class="screen">
+    <div class="card card-levels">
+      <h2>{{ STR.levels }}</h2>
+      <div class="levels-grid">
+        @for (lvl of levelCards(); track lvl.id) {
+          <button class="lvl" [class.locked]="!lvl.open" [disabled]="!lvl.open"
+                  (click)="startLevel(lvl.index)">
+            <span class="lvl-num">{{ lvl.id }}</span>
+            <span class="lvl-name">{{ lvl.unit }}</span>
+            <span class="lvl-stars">{{ lvl.open ? starsDisplay(lvl.stars) : '🔒' }}</span>
+          </button>
+        }
+      </div>
+      <button class="big ghost" (click)="toMenu()">←</button>
+    </div>
+  </div>
+}
+
+<!-- Resumen de nivel -->
+@if (mode() === 'summary' && summary(); as sm) {
+  <div class="screen">
+    <div class="card">
+      <h2>{{ STR.levelComplete }}</h2>
+      <div class="summary-stars">{{ starsDisplay(sm.stars) }}</div>
+      <p>
+        {{ STR.accuracy }}: <b>{{ sm.result.correct }}/{{ sm.result.total }}</b> ·
+        {{ STR.coins }}: <b>{{ sm.result.coins }}</b> ·
+        {{ STR.score }}: <b>{{ sm.result.score }}</b>
+      </p>
+      <h3>{{ STR.wordsLearned }}</h3>
+      <ul class="summary-words">
+        @for (w of sm.result.correctWords; track w.en) {
+          <li><b>{{ w.en }}</b><span>{{ w.es }}</span></li>
+        }
+      </ul>
+      <div class="btn-row">
+        @if (sm.stars >= 1 && !sm.isLast) {
+          <button class="big" (click)="next()">{{ STR.next }}</button>
+        }
+        <button class="big alt" (click)="retry()">{{ STR.retry }}</button>
+        <button class="big ghost" (click)="toMenu()">{{ STR.menu }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Derrota -->
+@if (mode() === 'failed') {
+  <div class="screen">
+    <div class="card">
+      <h2>{{ STR.levelFailed }}</h2>
+      <div class="fail-emoji">🤖💨</div>
+      <div class="btn-row">
+        <button class="big" (click)="retry()">{{ STR.retry }}</button>
+        <button class="big ghost" (click)="toMenu()">{{ STR.menu }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Pausa -->
+@if (mode() === 'paused') {
+  <div class="screen">
+    <div class="card">
+      <h2>{{ STR.paused }}</h2>
+      <div class="btn-row">
+        <button class="big" (click)="resume()">{{ STR.resume }}</button>
+        <button class="big ghost" (click)="toMenu()">{{ STR.menu }}</button>
+      </div>
+    </div>
+  </div>
+}
