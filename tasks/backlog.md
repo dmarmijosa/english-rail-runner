@@ -3,6 +3,9 @@
 _Última actualización: 2026-07-03 (2ª iteración)_
 
 ## Completado recientemente
+- ✅ **Modo Repaso**: re-jugar solo las palabras falladas (`domain/review.ts`, `Progress.failed`
+  con redención al acertar) (2026-07-03).
+- ✅ Más distancia palabra↔opciones (ventana de lectura ~5 s) (2026-07-03).
 - ✅ Pronunciación TTS (Web Speech API) al acertar + palabras del resumen tocables (2026-07-03).
 - ✅ Haptics con `@capacitor/haptics`: gestos, aciertos, fallos y golpes (2026-07-03).
 - ✅ Orden aleatorio de preguntas/carriles por partida (semilla por intento) (2026-07-03).
@@ -12,7 +15,7 @@ _Última actualización: 2026-07-03 (2ª iteración)_
   humanoide de Meshy rechazó las proporciones actuales, 2 intentos gastados) o rig procedural
   en Blender headless. Hoy corre con animación procedural (bob + balanceo) en `infra/scene.ts`.
 - Clips de salto y tropiezo dedicados cuando exista rig.
-- Modo repaso: re-jugar solo las palabras falladas (se registran en `Progress.learned`).
+- Repaso: barajar el subconjunto cuando hay >10 palabras falladas (hoy toma las 10 más antiguas).
 - Tienda cosmética con las monedas (skins del zorro) — hoy solo puntúan.
 - Logros (racha perfecta, nivel sin daño, 100 palabras).
 - Variedad visual por tier: skybox nocturno/nevado en tiers altos (requiere nueva STYLE FORMULA parcial).

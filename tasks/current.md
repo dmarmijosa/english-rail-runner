@@ -1,6 +1,22 @@
 # Tarea actual
 
-_Última actualización: 2026-07-03 (2ª iteración)_
+_Última actualización: 2026-07-03 (3ª iteración)_
+
+## Iteración 3 (última) — distancia de lectura + Modo Repaso
+- ✅ Más distancia entre la palabra y las opciones: la ventana de lectura pasó de
+  `max(55, speed*3.8)` a `max(80, speed*5.6)` (~5 s) y el pórtico 3D de la frase se
+  separó de los carteles (gate−12). Verificado: readGap 55 → 82 unidades.
+- ✅ **Modo Repaso** (tarea del backlog): las palabras falladas se guardan en
+  `Progress.failed` (en→es) y se redimen al acertarlas. Nuevo `domain/review.ts`
+  construye un nivel sintético con hasta 10 palabras falladas; distractores tomados de
+  TODO el vocabulario (`ALL_PAIRS`). Botón "🔁 Repaso (N)" en el menú; el HUD muestra
+  "🔁 Repaso"; el resumen dice "¡Repaso completado!". No escribe estrellas de nivel.
+  Verificado E2E: fallar → repasar → redención (`failed` vacío, palabras a `learned`).
+- Regresión OK en nivel normal (8 preguntas, distractores del mismo tema).
+- Archivos: `domain/review.ts` (NUEVO), `domain/curriculum.ts` (WordPair), `domain/quiz.ts`
+  (pool de distractores), `domain/progress.ts` (`failed` + redención), `engine/level-run.ts`
+  (readDist, failedWords, distractorPool, gates por nº real de preguntas),
+  `game.page.ts/.html/.scss` (runLevel + startReview, botón repaso, HUD/summary), `strings.ts`.
 
 ## Qué se está desarrollando actualmente
 - ✅ HECHO hoy — **iteración mobile-first**:

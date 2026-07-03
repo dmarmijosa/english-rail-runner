@@ -1,6 +1,13 @@
 # Estado actual del desarrollo
 
-_Actualizado: 2026-07-03 (2ª iteración: mobile-first)_
+_Actualizado: 2026-07-03 (3ª iteración: repaso + distancia de lectura)_
+
+## Iteración 3 (última)
+- Más distancia palabra↔opciones: ventana de lectura ~5 s (readGap 55 → 82).
+- **Modo Repaso** (`domain/review.ts`): re-juega las palabras falladas (`Progress.failed`),
+  redimidas al acertar; botón "🔁 Repaso (N)" en el menú, resumen "¡Repaso completado!".
+- Verificado E2E en navegador; build de producción OK.
+
 
 ## Iteración mobile-first (última)
 - Gestos táctiles encadenados como control principal + háptica; UI sin menciones de teclado;

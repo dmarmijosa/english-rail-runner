@@ -7,6 +7,7 @@ correcta** antes de la puerta de respuesta. Un dron villano se acerca con cada e
 - 🎮 **36 niveles** desde lo básico (saludos, números, colores) hasta conversación esencial
 - 🪙 Monedas, rachas ×5, estrellas por nivel y potenciadores (🛡️ escudo, 🧲 imán, 🐢 cámara lenta, ✖️2)
 - 🗣️ **Pronunciación**: cada acierto se pronuncia en inglés (Web Speech API, offline)
+- 🔁 **Modo Repaso**: re-juega solo las palabras que has fallado hasta dominarlas
 - 📱 **Mobile-first**: gestos táctiles encadenados con vibración háptica; también teclado y mando
 - 🎨 Estilo propio: desierto al atardecer, tren de madera ámbar/turquesa, low-poly cartoon
 - 🔀 Cada partida baraja el orden de preguntas y el carril correcto — nunca se repite igual

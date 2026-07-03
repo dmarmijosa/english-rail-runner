@@ -13,6 +13,9 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { STR } from './strings';
 import { CURRICULUM, LevelDef } from './domain/curriculum';
 import { Progress, recordResult, starsFor, unlocked } from './domain/progress';
+import {
+  ALL_PAIRS, REVIEW_DIFFICULTY, REVIEW_LEVEL_ID, buildReviewLevel, reviewCount,
+} from './domain/review';
 import { Command, LevelRun, PowerKind, ROOF, RunResult, ViewModel } from './engine/level-run';
 import { GameScene } from './infra/scene';
 import { GameInput } from './infra/input';
@@ -37,6 +40,7 @@ interface SummaryVM {
   result: RunResult;
   stars: number;
   isLast: boolean;
+  isReview: boolean;
 }
 
 /** Fixed simulation step in ms (60 Hz). */
@@ -82,11 +86,14 @@ export class GamePage implements AfterViewInit, OnDestroy {
   readonly unitName = signal('');
   readonly summary = signal<SummaryVM | null>(null);
   readonly showHint = signal(false);
+  readonly reviewMode = signal(false);
   readonly devInfo = signal('');
 
   private readonly progress = signal<Progress>(loadProgress());
   /** Total distinct English words learned across all levels. */
   readonly learnedCount = computed(() => Object.keys(this.progress().learned).length);
+  /** How many words are waiting in the review list. */
+  readonly toReview = computed(() => reviewCount(this.progress()));
   /** Level-select cards derived from progress (locks + stars). */
   readonly levelCards = computed<LevelCard[]>(() => {
     const p = this.progress();
@@ -106,6 +113,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
   private readonly speech = new Speech();
   private run: LevelRun | null = null;
   private levelIndex = 0;
+  private isReviewRun = false;
   private rafId = 0;
   private acc = 0;
   private last = 0;
@@ -238,7 +246,10 @@ export class GamePage implements AfterViewInit, OnDestroy {
 
   pause(): void { if (this.mode() === 'run') this.mode.set('paused'); }
 
-  retry(): void { this.startLevel(this.levelIndex); }
+  retry(): void {
+    if (this.isReviewRun) this.startReview();
+    else this.startLevel(this.levelIndex);
+  }
 
   next(): void {
     if (this.levelIndex + 1 < CURRICULUM.length) this.startLevel(this.levelIndex + 1);
@@ -249,13 +260,38 @@ export class GamePage implements AfterViewInit, OnDestroy {
   say(text: string): void { this.speech.speak(text); }
 
   /**
-   * Creates a fresh {@link LevelRun} (new random seed each attempt) and
-   * switches the page into run mode.
+   * Starts a curriculum level (new random seed each attempt).
    * @param index 0-based curriculum index.
    */
   startLevel(index: number): void {
-    const level: LevelDef = CURRICULUM[index];
     this.levelIndex = index;
+    this.runLevel(CURRICULUM[index], index, false);
+  }
+
+  /**
+   * Starts a review session built from the words the player has missed.
+   * No-op when the review list is empty.
+   */
+  startReview(): void {
+    const level = buildReviewLevel(this.progress());
+    if (!level) return;
+    this.runLevel(level, REVIEW_DIFFICULTY, true, ALL_PAIRS);
+  }
+
+  /**
+   * Creates a fresh {@link LevelRun} and switches the page into run mode.
+   * @param level          Level (curriculum or synthetic review) to play.
+   * @param difficultyIndex Drives speed/hazard density (see levelConfig).
+   * @param isReview       True for a review session (no curriculum stars).
+   * @param distractorPool Optional wrong-answer pool (review uses the whole
+   *                       vocabulary so short word sets still get 3 options).
+   */
+  private runLevel(
+    level: LevelDef, difficultyIndex: number, isReview: boolean,
+    distractorPool?: ReadonlyArray<readonly [string, string]>,
+  ): void {
+    this.isReviewRun = isReview;
+    this.reviewMode.set(isReview);
     this.levelId.set(level.id);
     this.unitName.set(level.unit);
     this.hearts.set(3);
@@ -271,7 +307,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
     this.hintTimer = setTimeout(() => this.zone.run(() => this.showHint.set(false)), HINT_MS);
 
     const z = (fn: () => void) => this.zone.run(fn);
-    this.run = new LevelRun(level, index, {
+    this.run = new LevelRun(level, difficultyIndex, {
       onJump: () => this.sound.play('jump'),
       onCoin: (n) => { z(() => this.coins.set(n)); this.sound.play('coin'); },
       onQuestion: (q) => z(() => this.phrase.set(q.es)),
@@ -307,10 +343,14 @@ export class GamePage implements AfterViewInit, OnDestroy {
         z(() => {
           const stars = starsFor(result.correct, result.total);
           const updated = recordResult(
-            this.progress(), level.id, result.correctWords.map((w) => w.en), stars, result.coins);
+            this.progress(), isReview ? REVIEW_LEVEL_ID : level.id,
+            result.correctWords, result.failedWords, stars, result.coins);
           this.progress.set(updated);
           saveProgress(updated);
-          this.summary.set({ result, stars, isLast: this.levelIndex + 1 >= CURRICULUM.length });
+          this.summary.set({
+            result, stars, isReview,
+            isLast: isReview || this.levelIndex + 1 >= CURRICULUM.length,
+          });
           this.mode.set('summary');
         });
       },
@@ -318,7 +358,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
         this.sound.stopMusic();
         z(() => this.mode.set('failed'));
       },
-    });
+    }, undefined, distractorPool);
     this.mode.set('run');
     this.last = performance.now();
     this.acc = 0;

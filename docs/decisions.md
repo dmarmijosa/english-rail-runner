@@ -69,6 +69,21 @@ _Registro de decisiones importantes, con contexto y consecuencias._
 - El dron villano solo se materializa cuando la persecución es real (dd < 10) y vuela en
   alto por el flanco del héroe — nunca entre la cámara y los carteles de respuesta.
 
+## D13 — Modo Repaso sobre palabras falladas
+- Las respuestas incorrectas se acumulan en `Progress.failed` (en→es). `domain/review.ts`
+  construye un `LevelDef` sintético (id 0, hasta 10 palabras) que se juega con el mismo
+  `LevelRun`; los distractores salen de TODO el vocabulario (`ALL_PAIRS`) porque el set de
+  repaso puede ser pequeño. Acertar una palabra la redime (sale de `failed`, entra en
+  `learned`). El repaso no escribe estrellas de curriculum (`recordResult` ignora `levelId ≤ 0`).
+- Consecuencia de diseño: `LevelRun` acepta un `distractorPool` opcional y `buildQuestions`
+  garantiza 2 distractores distintos ≠ respuesta; el nº de puertas ya no depende de
+  `cfg.questions` sino de `questions.length` (soporta niveles de longitud variable).
+
+## D14 — Ventana de lectura ampliada (~5 s)
+- Petición del usuario: la palabra y las opciones estaban demasiado juntas para elegir.
+  `readDist` pasó de `max(55, speed*3.8)` a `max(80, speed*5.6)` y el pórtico 3D de la frase
+  se separó de los carteles (`gate−12`). Sube la distancia de reacción sin tocar el resto.
+
 ## Patrones utilizados
 - **Capas concéntricas** (domain ← engine ← infra/ui), **View-Model plano** por frame,
   **Object pooling**, **Command pattern** para input (teclado/táctil/gamepad → `Command`),

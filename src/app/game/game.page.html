@@ -10,7 +10,13 @@
     <div class="hud-top">
       <div>
         <div class="hud-hearts">{{ heartsDisplay() }}</div>
-        <div class="hud-level">{{ STR.level }} {{ levelId() }} · {{ unitName() }}</div>
+        <div class="hud-level">
+          @if (reviewMode()) {
+            🔁 {{ STR.review }}
+          } @else {
+            {{ STR.level }} {{ levelId() }} · {{ unitName() }}
+          }
+        </div>
       </div>
       <div class="hud-center">
         <div class="hud-score">{{ score() }}</div>
@@ -53,6 +59,11 @@
       <h1>{{ STR.title }}</h1>
       <p class="sub">{{ STR.subtitle }}</p>
       <button class="big" (click)="showLevels()">{{ STR.play }}</button>
+      @if (toReview() > 0) {
+        <button class="big alt review-btn" (click)="startReview()">
+          🔁 {{ STR.review }} ({{ toReview() }})
+        </button>
+      }
       <p class="sub stats">
         @if (learnedCount() > 0) {
           ⭐ {{ learnedCount() }} {{ STR.totalWords }}
@@ -88,7 +99,7 @@
 @if (mode() === 'summary' && summary(); as sm) {
   <div class="screen">
     <div class="card">
-      <h2>{{ STR.levelComplete }}</h2>
+      <h2>{{ sm.isReview ? STR.reviewComplete : STR.levelComplete }}</h2>
       <div class="summary-stars">{{ starsDisplay(sm.stars) }}</div>
       <p>
         {{ STR.accuracy }}: <b>{{ sm.result.correct }}/{{ sm.result.total }}</b> ·

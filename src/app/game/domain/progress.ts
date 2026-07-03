@@ -2,6 +2,7 @@
  * @fileoverview Domain: progression rules. Pure functions over a plain,
  * serializable progress object (persisted as-is by infra/storage).
  */
+import { WordPair } from './curriculum';
 
 /** Player progress across the whole curriculum. */
 export interface Progress {
@@ -11,6 +12,8 @@ export interface Progress {
   coins: number;
   /** English words answered correctly at least once. */
   learned: Record<string, boolean>;
+  /** Words still to review (answered wrong and not yet redeemed): en → es. */
+  failed: Record<string, string>;
 }
 
 /**
@@ -28,7 +31,7 @@ export function starsFor(correct: number, total: number): number {
 
 /** Fresh progress for a first-time player. */
 export function emptyProgress(): Progress {
-  return { stars: {}, coins: 0, learned: {} };
+  return { stars: {}, coins: 0, learned: {}, failed: {} };
 }
 
 /** Level `levelId` is unlocked when the previous level has ≥1 star. */
@@ -37,15 +40,28 @@ export function unlocked(progress: Progress, levelId: number): boolean {
 }
 
 /**
- * Merges a finished level into the progress (immutably): keeps the best star
- * count, accumulates coins and marks the words as learned.
+ * Merges a finished run into the progress (immutably): keeps the best star
+ * count, accumulates coins, marks correct words as learned (redeeming them
+ * from the review list) and queues newly missed words for review.
+ * @param levelId Real level id (1-based) to store stars for; pass ≤ 0 for a
+ *                review session so no curriculum star is written.
+ * @param correctWords Words answered right this run.
+ * @param failedWords  Words answered wrong this run (queued for review).
  */
 export function recordResult(
-  progress: Progress, levelId: number, correctWords: string[], stars: number, coins: number,
+  progress: Progress, levelId: number,
+  correctWords: WordPair[], failedWords: WordPair[],
+  stars: number, coins: number,
 ): Progress {
-  const p: Progress = { ...progress, stars: { ...progress.stars }, learned: { ...progress.learned } };
-  p.stars[levelId] = Math.max(p.stars[levelId] || 0, stars);
+  const p: Progress = {
+    ...progress,
+    stars: { ...progress.stars },
+    learned: { ...progress.learned },
+    failed: { ...progress.failed },
+  };
+  if (levelId > 0) p.stars[levelId] = Math.max(p.stars[levelId] || 0, stars);
   p.coins += coins;
-  for (const w of correctWords) p.learned[w] = true;
+  for (const w of correctWords) { p.learned[w.en] = true; delete p.failed[w.en]; }
+  for (const w of failedWords) p.failed[w.en] = w.es;
   return p;
 }

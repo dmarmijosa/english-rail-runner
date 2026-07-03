@@ -93,6 +93,13 @@ button.big {
 
 .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
+/* review CTA sits on its own line under Play */
+.review-btn {
+  display: block;
+  margin: 12px auto 0;
+  animation: popIn .38s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
 .levels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));

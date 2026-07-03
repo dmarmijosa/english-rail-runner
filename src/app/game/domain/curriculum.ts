@@ -4,6 +4,9 @@
  * drawn from the same level by the quiz module, so they stay plausible.
  */
 
+/** A vocabulary pair: Spanish prompt + its English answer. */
+export interface WordPair { es: string; en: string; }
+
 /** One curriculum level: a themed unit of 8 word/phrase pairs. */
 export interface LevelDef {
   id: number;

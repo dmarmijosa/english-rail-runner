@@ -44,17 +44,30 @@ export function shuffled<T>(arr: readonly T[], rng: Rng): T[] {
 }
 
 /**
- * Builds the question list for a level. Distractors come from the same level
- * (same topic → plausible confusions); order and correct lane depend on `seed`.
- * @param level Level definition with its word pairs.
- * @param seed  RNG seed — vary it per run so replays differ.
+ * Builds the question list for a level. Each question gets two distractors
+ * drawn from `distractorPool` (default: the same level, so confusions stay
+ * on-topic); order and correct lane depend on `seed`.
+ * @param level          Level definition with its word pairs.
+ * @param seed           RNG seed — vary it per run so replays differ.
+ * @param distractorPool Pool the wrong options are drawn from. Defaults to the
+ *                       level's own items; review mode passes the full
+ *                       vocabulary so short word sets still get 3 options.
  */
-export function buildQuestions(level: LevelDef, seed: number): Question[] {
+export function buildQuestions(
+  level: LevelDef,
+  seed: number,
+  distractorPool: ReadonlyArray<readonly [string, string]> = level.items,
+): Question[] {
   const rng = mulberry32(seed);
   const order = shuffled(level.items, rng);
   return order.map(([es, en]) => {
-    const others = shuffled(level.items.filter(([, e]) => e !== en), rng)
-      .slice(0, 2).map(([, e]) => e);
+    // pick two distinct distractors, never equal to the answer
+    const pool = shuffled(distractorPool, rng);
+    const others: string[] = [];
+    for (const [, e] of pool) {
+      if (e !== en && !others.includes(e)) others.push(e);
+      if (others.length === 2) break;
+    }
     const options = shuffled([en, ...others], rng);
     return { es, en, options, correctLane: options.indexOf(en) - 1 };
   });

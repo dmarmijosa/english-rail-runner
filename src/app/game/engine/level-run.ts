@@ -3,8 +3,10 @@
  * over fixed timesteps — no DOM, no Three.js, no Angular. Communicates
  * outward only through {@link RunHooks} events and the {@link ViewModel}.
  */
-import { LevelDef, LevelConfig, levelConfig } from '../domain/curriculum';
+import { LevelDef, LevelConfig, WordPair, levelConfig } from '../domain/curriculum';
 import { Question, Rng, buildQuestions, mulberry32 } from '../domain/quiz';
+
+export type { WordPair };
 
 export const ROOF = 2.6;
 const GRAVITY = 40;
@@ -30,15 +32,16 @@ export interface Gate { reveal: number; gate: number; resolved: boolean; }
 
 export interface SignView { lane: number; d: number; text: string; state: 'normal' | 'correct' | 'wrong'; }
 
-export interface WordPair { es: string; en: string; }
-
 export interface RunResult {
   won: boolean;
   correct: number;
   total: number;
   coins: number;
   score: number;
+  /** Words answered correctly this run. */
   correctWords: WordPair[];
+  /** Words answered wrong this run (queued for review). */
+  failedWords: WordPair[];
 }
 
 export interface ViewModel {
@@ -100,6 +103,7 @@ export class LevelRun {
   correct = 0;
   answered = 0;
   correctWords: WordPair[] = [];
+  failedWords: WordPair[] = [];
   droneDist: number;
   power = { shield: false, magnetMs: 0, slowMs: 0, x2Ms: 0 };
   over = false;
@@ -123,26 +127,33 @@ export class LevelRun {
    * @param seed       RNG seed. Defaults to a per-run random value so question
    *                   order, correct lanes and hazard layout differ on every
    *                   attempt; pass a fixed seed to reproduce a run in tests.
+   * @param distractorPool Optional wrong-answer pool (review mode passes the
+   *                   whole vocabulary); defaults to the level's own items.
    */
   constructor(
     private level: LevelDef,
     levelIndex: number,
     private hooks: RunHooks,
     seed: number = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0,
+    distractorPool?: ReadonlyArray<readonly [string, string]>,
   ) {
     this.seed = seed;
     this.cfg = levelConfig(levelIndex);
     this.rng = mulberry32(seed ^ (level.id * 7919));
-    this.questions = buildQuestions(level, seed ^ (level.id * 1337));
+    this.questions = buildQuestions(level, seed ^ (level.id * 1337), distractorPool);
     this.droneDist = this.cfg.droneStart;
     this.layoutTrack();
   }
 
   private layoutTrack(): void {
-    const { speed, questions, obstacleRate, rampRate, powerupCount } = this.cfg;
-    const readDist = Math.max(55, speed * 3.8);   // ≥3.5 s reading window
+    const { speed, obstacleRate, rampRate, powerupCount } = this.cfg;
+    // one gate per actual question (review runs may have fewer than 8)
+    const nQuestions = this.questions.length;
+    // reading window: distance the phrase is visible before its answer gate.
+    // Generous on purpose (~5 s) so the player has room to pick a lane.
+    const readDist = Math.max(80, speed * 5.6);
     let d = 60;
-    for (let q = 0; q < questions; q++) {
+    for (let q = 0; q < nQuestions; q++) {
       const reveal = d;
       const gate = d + readDist;
       this.gates.push({ reveal, gate, resolved: false });
@@ -248,7 +259,8 @@ export class LevelRun {
       this.over = true;
       this.result = {
         won: true, correct: this.correct, total: this.questions.length,
-        coins: this.coins, score: this.score, correctWords: this.correctWords,
+        coins: this.coins, score: this.score,
+        correctWords: this.correctWords, failedWords: this.failedWords,
       };
       this.hooks.onFinish?.(this.result);
     }
@@ -262,7 +274,7 @@ export class LevelRun {
       this.qIndex = next;
       const q = this.questions[next];
       const gate = this.gates[next];
-      this.gantry = { d: gate.gate - 6, text: q.es };
+      this.gantry = { d: gate.gate - 12, text: q.es };
       this.signState = q.options.map((text, i) => ({
         lane: i - 1, d: gate.gate, text, state: 'normal' as const,
       }));
@@ -295,6 +307,7 @@ export class LevelRun {
         } else {
           this.streak = 0;
           this.droneDist -= 8;
+          this.failedWords.push({ es: q.es, en: q.en });
           this.hurt();
           this.hooks.onWrong?.(q);
         }
@@ -330,7 +343,8 @@ export class LevelRun {
     this.over = true;
     this.result = {
       won: false, correct: this.correct, total: this.questions.length,
-      coins: 0, score: this.score, correctWords: this.correctWords,
+      coins: 0, score: this.score,
+      correctWords: this.correctWords, failedWords: this.failedWords,
     };
     this.hooks.onFail?.(this.result);
   }
