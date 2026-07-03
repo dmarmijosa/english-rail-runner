@@ -1,8 +1,22 @@
 # Tarea actual
 
-_Última actualización: 2026-07-03 (3ª iteración)_
+_Última actualización: 2026-07-03 (4ª iteración)_
 
-## Iteración 3 (última) — distancia de lectura + Modo Repaso
+## Iteración 4 (última) — más distancia, visual héroe/dron + Logros
+- ✅ Aún más distancia palabra↔opciones: `readDist` de `max(80, speed*5.6)` a
+  `max(115, speed*7.6)` (~7 s). Verificado: readGap 82 → 115.
+- ✅ Visual: héroe más grande (altura 2.4) y elevado (+0.72) para que se vean los pies;
+  cámara más picada (y 6.7, mira a y 2.3). Dron rediseñado para estar **siempre visible**
+  volando por delante y arriba de la vía, descendiendo hacia el héroe según se acerca
+  (sin tapar cámara ni carteles). Verificado en móvil.
+- ✅ **Sistema de Logros** (tarea del backlog): 9 logros en `domain/achievements.ts`
+  (primer paso, sin fallos, intacto, racha 5, repasador, 25/100 palabras, tier 1, 500
+  monedas). `Progress.achievements` los persiste; se evalúan al terminar un nivel, el
+  resumen muestra un toast "¡Logro desbloqueado!" y hay pantalla de lista desde el menú
+  ("🏅 Logros n/total"). Motor: `RunResult` ahora expone `maxStreak` y `heartsLeft`.
+  Verificado E2E: nivel perfecto desbloqueó y guardó 4 logros.
+
+## Iteración 3 — distancia de lectura + Modo Repaso
 - ✅ Más distancia entre la palabra y las opciones: la ventana de lectura pasó de
   `max(55, speed*3.8)` a `max(80, speed*5.6)` (~5 s) y el pórtico 3D de la frase se
   separó de los carteles (gate−12). Verificado: readGap 55 → 82 unidades.

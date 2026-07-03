@@ -84,6 +84,21 @@ _Registro de decisiones importantes, con contexto y consecuencias._
   `readDist` pasó de `max(55, speed*3.8)` a `max(80, speed*5.6)` y el pórtico 3D de la frase
   se separó de los carteles (`gate−12`). Sube la distancia de reacción sin tocar el resto.
 
+## D15 — Sistema de Logros en dominio puro
+- `domain/achievements.ts` define un catálogo de logros con predicados puros que reciben un
+  `AchievementContext` (progress ya fusionado + datos del run: won/correct/total/maxStreak/
+  heartsLeft/isReview). `newlyUnlocked` devuelve los ids nuevos sin mutar; la UI los marca en
+  `Progress.achievements` y los persiste. Para no acoplar dominio↔engine, el contexto usa
+  campos primitivos, no `RunResult`. El motor añadió `maxStreak` y `heartsLeft` a `RunResult`.
+- Se evalúan solo al completar un nivel (onFinish), no al perder — simplificación aceptada.
+
+## D16 — Cámara y colocación del dron para legibilidad
+- Los pies del héroe se ocultaban tras las costillas del vagón: se elevó el héroe
+  (+0.72 sobre el techo, altura 2.4) y se picó la cámara (y 6.7, mira a y 2.3).
+- El dron pasó a estar **siempre visible** volando por delante y arriba de la vía
+  (z negativo, y alto), descendiendo hacia el héroe con `closeness = 1 − dd/30`. Así la
+  amenaza siempre se ve sin tapar la cámara ni los carteles (que van más bajos y lejos).
+
 ## Patrones utilizados
 - **Capas concéntricas** (domain ← engine ← infra/ui), **View-Model plano** por frame,
   **Object pooling**, **Command pattern** para input (teclado/táctil/gamepad → `Command`),

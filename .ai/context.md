@@ -1,6 +1,15 @@
 # Estado actual del desarrollo
 
-_Actualizado: 2026-07-03 (3ª iteración: repaso + distancia de lectura)_
+_Actualizado: 2026-07-03 (4ª iteración: logros + visual)_
+
+## Iteración 4 (última)
+- Más distancia palabra↔opciones (~7 s; readGap 82 → 115).
+- Visual: héroe más grande/elevado (pies visibles), cámara más picada, dron **siempre visible**
+  volando sobre la vía y descendiendo al acercarse.
+- **Sistema de Logros** (`domain/achievements.ts`, 9 logros): persistidos en `Progress.achievements`,
+  toast en el resumen y pantalla de lista desde el menú. `RunResult` añade `maxStreak`/`heartsLeft`.
+- Verificado E2E en móvil; build de producción OK.
+
 
 ## Iteración 3 (última)
 - Más distancia palabra↔opciones: ventana de lectura ~5 s (readGap 55 → 82).

@@ -14,6 +14,8 @@ export interface Progress {
   learned: Record<string, boolean>;
   /** Words still to review (answered wrong and not yet redeemed): en → es. */
   failed: Record<string, string>;
+  /** Unlocked achievement ids. */
+  achievements: Record<string, boolean>;
 }
 
 /**
@@ -31,7 +33,7 @@ export function starsFor(correct: number, total: number): number {
 
 /** Fresh progress for a first-time player. */
 export function emptyProgress(): Progress {
-  return { stars: {}, coins: 0, learned: {}, failed: {} };
+  return { stars: {}, coins: 0, learned: {}, failed: {}, achievements: {} };
 }
 
 /** Level `levelId` is unlocked when the previous level has ≥1 star. */

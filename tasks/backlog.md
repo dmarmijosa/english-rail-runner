@@ -3,6 +3,8 @@
 _Última actualización: 2026-07-03 (2ª iteración)_
 
 ## Completado recientemente
+- ✅ **Sistema de Logros** (`domain/achievements.ts`, 9 logros, toast + pantalla de lista) (2026-07-03).
+- ✅ Visual: héroe visible con pies + dron siempre en pantalla; +distancia de lectura (~7 s) (2026-07-03).
 - ✅ **Modo Repaso**: re-jugar solo las palabras falladas (`domain/review.ts`, `Progress.failed`
   con redención al acertar) (2026-07-03).
 - ✅ Más distancia palabra↔opciones (ventana de lectura ~5 s) (2026-07-03).
@@ -17,13 +19,11 @@ _Última actualización: 2026-07-03 (2ª iteración)_
 - Clips de salto y tropiezo dedicados cuando exista rig.
 - Repaso: barajar el subconjunto cuando hay >10 palabras falladas (hoy toma las 10 más antiguas).
 - Tienda cosmética con las monedas (skins del zorro) — hoy solo puntúan.
-- Logros (racha perfecta, nivel sin daño, 100 palabras).
+- Más logros + evaluarlos también al perder (hoy solo al completar un nivel).
 - Variedad visual por tier: skybox nocturno/nevado en tiers altos (requiere nueva STYLE FORMULA parcial).
 - i18n del UI: `strings.ts` es intercambiable; añadir modo invertido EN→ES.
-- Ajuste fino del tamaño/coreografía del dron cuando está muy cerca (dd < 3).
 
 ## Bugs encontrados
-- (menor) El dron puede solaparse con la cámara cuando droneDist < 4.
 - (menor) El backdrop del menú puede mostrar el interior de un vagón según el frame.
 - (menor) `music.mp3` es un contenedor .m4a renombrado — decodifica bien, pero renombrar sería más limpio.
 - (revisar) Swipes consecutivos requieren levantar el dedo entre gestos.

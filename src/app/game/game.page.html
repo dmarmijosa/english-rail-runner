@@ -64,6 +64,9 @@
           🔁 {{ STR.review }} ({{ toReview() }})
         </button>
       }
+      <button class="big ghost menu-link" (click)="showAchievements()">
+        🏅 {{ STR.achievements }} ({{ achievementsDone() }}/{{ achievementsTotal }})
+      </button>
       <p class="sub stats">
         @if (learnedCount() > 0) {
           ⭐ {{ learnedCount() }} {{ STR.totalWords }}
@@ -95,12 +98,38 @@
   </div>
 }
 
+<!-- Logros -->
+@if (mode() === 'achievements') {
+  <div class="screen">
+    <div class="card card-levels">
+      <h2>🏅 {{ STR.achievements }} ({{ achievementsDone() }}/{{ achievementsTotal }})</h2>
+      <ul class="ach-list">
+        @for (a of achievementList(); track a.id) {
+          <li [class.locked]="!a.unlocked">
+            <span class="ach-icon">{{ a.unlocked ? a.icon : '🔒' }}</span>
+            <span class="ach-text"><b>{{ a.title }}</b><small>{{ a.desc }}</small></span>
+          </li>
+        }
+      </ul>
+      <button class="big ghost" (click)="toMenu()">←</button>
+    </div>
+  </div>
+}
+
 <!-- Resumen de nivel -->
 @if (mode() === 'summary' && summary(); as sm) {
   <div class="screen">
     <div class="card">
       <h2>{{ sm.isReview ? STR.reviewComplete : STR.levelComplete }}</h2>
       <div class="summary-stars">{{ starsDisplay(sm.stars) }}</div>
+      @if (newAchievements().length) {
+        <div class="ach-toast">
+          <div class="ach-toast-title">{{ STR.achievementUnlocked }}</div>
+          @for (a of newAchievements(); track a.id) {
+            <div class="ach-toast-row"><span>{{ a.icon }}</span> {{ a.title }}</div>
+          }
+        </div>
+      }
       <p>
         {{ STR.accuracy }}: <b>{{ sm.result.correct }}/{{ sm.result.total }}</b> ·
         {{ STR.coins }}: <b>{{ sm.result.coins }}</b> ·

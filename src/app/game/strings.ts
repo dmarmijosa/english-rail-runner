@@ -26,6 +26,8 @@ export const STR = {
   review: 'Repaso',
   reviewComplete: '¡Repaso completado!',
   reviewPending: 'por repasar',
+  achievements: 'Logros',
+  achievementUnlocked: '¡Logro desbloqueado!',
   resume: 'Continuar',
   paused: 'Pausa',
   totalWords: 'palabras aprendidas',

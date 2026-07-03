@@ -30,8 +30,9 @@ english-rail-runner/            # proyecto Ionic (raíz del repo git)
 │   │       ├── domain/         # puro: sin Angular, sin Three, sin DOM
 │   │       │   ├── curriculum.ts   # 36 niveles + levelConfig(i) + WordPair
 │   │       │   ├── quiz.ts         # RNG con semilla, preguntas + distractores
-│   │       │   ├── progress.ts     # estrellas, desbloqueo, aprendidas y falladas
-│   │       │   └── review.ts       # nivel sintético con las palabras falladas
+│   │       │   ├── progress.ts     # estrellas, desbloqueo, aprendidas, falladas, logros
+│   │       │   ├── review.ts       # nivel sintético con las palabras falladas
+│   │       │   └── achievements.ts # catálogo de logros + evaluación pura
 │   │       ├── engine/
 │   │       │   └── level-run.ts    # LevelRun: simulación a paso fijo, colisiones,
 │   │       │                       # puertas de respuesta, potenciadores, dron

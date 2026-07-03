@@ -16,6 +16,7 @@ import { Progress, recordResult, starsFor, unlocked } from './domain/progress';
 import {
   ALL_PAIRS, REVIEW_DIFFICULTY, REVIEW_LEVEL_ID, buildReviewLevel, reviewCount,
 } from './domain/review';
+import { ACHIEVEMENTS, Achievement, newlyUnlocked } from './domain/achievements';
 import { Command, LevelRun, PowerKind, ROOF, RunResult, ViewModel } from './engine/level-run';
 import { GameScene } from './infra/scene';
 import { GameInput } from './infra/input';
@@ -24,7 +25,10 @@ import { Speech } from './infra/tts';
 import { loadProgress, saveProgress } from './infra/storage';
 
 /** Top-level UI state of the page. */
-type Mode = 'menu' | 'levels' | 'run' | 'paused' | 'summary' | 'failed';
+type Mode = 'menu' | 'levels' | 'run' | 'paused' | 'summary' | 'failed' | 'achievements';
+
+/** Achievement plus whether the player has unlocked it (for the list). */
+interface AchievementVM extends Achievement { unlocked: boolean; }
 
 /** Level-select card view model. */
 interface LevelCard {
@@ -87,6 +91,8 @@ export class GamePage implements AfterViewInit, OnDestroy {
   readonly summary = signal<SummaryVM | null>(null);
   readonly showHint = signal(false);
   readonly reviewMode = signal(false);
+  /** Achievements unlocked by the run just finished (shown in the summary). */
+  readonly newAchievements = signal<Achievement[]>([]);
   readonly devInfo = signal('');
 
   private readonly progress = signal<Progress>(loadProgress());
@@ -94,6 +100,15 @@ export class GamePage implements AfterViewInit, OnDestroy {
   readonly learnedCount = computed(() => Object.keys(this.progress().learned).length);
   /** How many words are waiting in the review list. */
   readonly toReview = computed(() => reviewCount(this.progress()));
+  /** All achievements with their unlocked state, for the list screen. */
+  readonly achievementList = computed<AchievementVM[]>(() => {
+    const a = this.progress().achievements;
+    return ACHIEVEMENTS.map((def) => ({ ...def, unlocked: !!a[def.id] }));
+  });
+  /** How many achievements are unlocked (for the menu badge). */
+  readonly achievementsDone = computed(() => Object.keys(this.progress().achievements).length);
+  /** Total achievements available. */
+  readonly achievementsTotal = ACHIEVEMENTS.length;
   /** Level-select cards derived from progress (locks + stars). */
   readonly levelCards = computed<LevelCard[]>(() => {
     const p = this.progress();
@@ -233,6 +248,8 @@ export class GamePage implements AfterViewInit, OnDestroy {
   // ——— user actions ———
   showLevels(): void { this.mode.set('levels'); }
 
+  showAchievements(): void { this.mode.set('achievements'); }
+
   toMenu(): void {
     this.mode.set('menu');
     this.run = null;
@@ -342,11 +359,24 @@ export class GamePage implements AfterViewInit, OnDestroy {
         this.sound.stopMusic();
         z(() => {
           const stars = starsFor(result.correct, result.total);
-          const updated = recordResult(
+          let updated = recordResult(
             this.progress(), isReview ? REVIEW_LEVEL_ID : level.id,
             result.correctWords, result.failedWords, stars, result.coins);
+          // evaluate achievements against the merged progress
+          const gained = newlyUnlocked({
+            progress: updated, won: result.won, correct: result.correct,
+            total: result.total, maxStreak: result.maxStreak,
+            heartsLeft: result.heartsLeft, isReview,
+          });
+          if (gained.length) {
+            const ach = { ...updated.achievements };
+            for (const id of gained) ach[id] = true;
+            updated = { ...updated, achievements: ach };
+          }
           this.progress.set(updated);
           saveProgress(updated);
+          this.newAchievements.set(
+            gained.map((id) => ACHIEVEMENTS.find((a) => a.id === id)!).filter(Boolean));
           this.summary.set({
             result, stars, isReview,
             isLast: isReview || this.levelIndex + 1 >= CURRICULUM.length,

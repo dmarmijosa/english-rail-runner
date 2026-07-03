@@ -42,6 +42,10 @@ export interface RunResult {
   correctWords: WordPair[];
   /** Words answered wrong this run (queued for review). */
   failedWords: WordPair[];
+  /** Highest streak reached during the run. */
+  maxStreak: number;
+  /** Hearts left at the end (0 on a loss). */
+  heartsLeft: number;
 }
 
 export interface ViewModel {
@@ -102,6 +106,7 @@ export class LevelRun {
   streak = 0;
   correct = 0;
   answered = 0;
+  maxStreak = 0;
   correctWords: WordPair[] = [];
   failedWords: WordPair[] = [];
   droneDist: number;
@@ -150,8 +155,8 @@ export class LevelRun {
     // one gate per actual question (review runs may have fewer than 8)
     const nQuestions = this.questions.length;
     // reading window: distance the phrase is visible before its answer gate.
-    // Generous on purpose (~5 s) so the player has room to pick a lane.
-    const readDist = Math.max(80, speed * 5.6);
+    // Generous on purpose (~7 s) so the player has ample room to reach a lane.
+    const readDist = Math.max(115, speed * 7.6);
     let d = 60;
     for (let q = 0; q < nQuestions; q++) {
       const reveal = d;
@@ -261,6 +266,7 @@ export class LevelRun {
         won: true, correct: this.correct, total: this.questions.length,
         coins: this.coins, score: this.score,
         correctWords: this.correctWords, failedWords: this.failedWords,
+        maxStreak: this.maxStreak, heartsLeft: this.hearts,
       };
       this.hooks.onFinish?.(this.result);
     }
@@ -298,6 +304,7 @@ export class LevelRun {
         if (ok) {
           this.correct++;
           this.streak++;
+          this.maxStreak = Math.max(this.maxStreak, this.streak);
           const mult = Math.min(this.streak, 5) * (this.power.x2Ms > 0 ? 2 : 1);
           this.score += 100 * mult;
           this.coins += 5;
@@ -345,6 +352,7 @@ export class LevelRun {
       won: false, correct: this.correct, total: this.questions.length,
       coins: 0, score: this.score,
       correctWords: this.correctWords, failedWords: this.failedWords,
+      maxStreak: this.maxStreak, heartsLeft: 0,
     };
     this.hooks.onFail?.(this.result);
   }

@@ -499,10 +499,10 @@ export class GameScene {
     const loader = new GLTFLoader();
     loader.load(`${ASSETS}/models/hero.glb`, (gltf) => {
       const model = gltf.scene;
-      // normalize height to ~1.85 and face -Z (run direction)
+      // normalize height to ~2.4 (prominent focal point) and face -Z (run dir)
       const box = new THREE.Box3().setFromObject(model);
       const h = box.max.y - box.min.y;
-      const s = 1.85 / h;
+      const s = 2.4 / h;
       model.scale.setScalar(s);
       model.position.y = -box.min.y * s;
       model.rotation.y = Math.PI;
@@ -581,7 +581,8 @@ export class GameScene {
     // tail tip, not the feet — without the offset the feet sink into the
     // roof ribs and disappear from the chase-camera angle)
     const hx = view.heroX * LANE_X;
-    this.heroGroup.position.set(hx, view.heroY + 0.42, 0);
+    // lift the hero clearly above the barrel roof ribs so its feet read
+    this.heroGroup.position.set(hx, view.heroY + 0.72, 0);
     const lean = view.heroState === 'jump' ? 0.25 : view.heroState === 'slide' ? -0.9 : 0;
     this.heroGroup.rotation.x = THREE.MathUtils.lerp(this.heroGroup.rotation.x, lean, 0.2);
     this.heroGroup.rotation.z = THREE.MathUtils.lerp(this.heroGroup.rotation.z, view.heroRoll || 0, 0.25);
@@ -606,9 +607,10 @@ export class GameScene {
     const shake = view.effects.shake || 0;
     this.camera.position.set(
       this.camX + (Math.random() - 0.5) * shake,
-      5.4 + (view.heroY - ROOF_Y) * 0.35 + (Math.random() - 0.5) * shake,
-      8.5);
-    this.camera.lookAt(this.camX * 0.85, 3.1, -14);
+      6.7 + (view.heroY - ROOF_Y) * 0.35 + (Math.random() - 0.5) * shake,
+      8.8);
+    // look lower and closer so the steeper angle reveals the hero's feet
+    this.camera.lookAt(this.camX * 0.85, 2.3, -13);
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, view.effects.slow ? 55 : 62 + view.speed * 0.28, 0.05);
     this.camera.updateProjectionMatrix();
 
@@ -729,26 +731,25 @@ export class GameScene {
       this.meta.group.position.z = z;
     } else this.meta.group.visible = false;
 
-    // drone: appears only when the chase is real (dd < 10) and flies high at
-    // the hero's flank, swooping closer as dd shrinks — menacing without ever
-    // blocking the camera or covering the answer signs
+    // drone: ALWAYS on screen, hovering ahead of the hero and high over the
+    // track like a patrolling inspector. It descends and swoops toward the
+    // hero as droneDist shrinks, so the threat is always felt but it never
+    // blocks the camera or the answer signs (which sit lower and further).
     const dd = view.droneDist;
-    this.drone.visible = dd < 10;
-    if (this.drone.visible) {
-      const closeness = 1 - dd / 10; // 0 = far, 1 = about to catch
-      this.drone.position.set(
-        hx * 0.6 + 2.2 - closeness * 1.6 + Math.sin(this.t * 1.7) * 0.35,
-        ROOF_Y + 2.4 - closeness * 0.9 + Math.sin(this.t * 2.3) * 0.25,
-        2.0 + dd * 0.35);
-      this.drone.scale.setScalar(0.8);
-      this.drone.rotation.y = Math.sin(this.t * 1.1) * 0.2;
-      this.drone.rotation.x = 0.18; // leaning toward its prey
-      for (const rotor of this.drone.userData['rotors'] as THREE.Group[]) {
-        rotor.rotation.y = this.t * 26;
-      }
-      (this.drone.userData['lamp'] as THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>)
-        .material.color.setHex(Math.sin(this.t * 6) > 0 ? C.gold : C.magenta);
+    const closeness = Math.min(Math.max(1 - dd / 30, 0), 1); // 0 far, 1 caught
+    this.drone.visible = true;
+    this.drone.position.set(
+      hx * 0.5 + Math.sin(this.t * 1.4) * 0.5,
+      ROOF_Y + 4.6 - closeness * 2.4 + Math.sin(this.t * 2.3) * 0.28,
+      -7.5 + closeness * 6.8 + Math.sin(this.t * 1.1) * 0.4);
+    this.drone.scale.setScalar(0.9 + closeness * 0.35);
+    this.drone.rotation.y = Math.PI + Math.sin(this.t * 1.1) * 0.25; // faces the hero
+    this.drone.rotation.x = -0.15 - closeness * 0.2; // tilts down as it dives
+    for (const rotor of this.drone.userData['rotors'] as THREE.Group[]) {
+      rotor.rotation.y = this.t * 26;
     }
+    (this.drone.userData['lamp'] as THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>)
+      .material.color.setHex(Math.sin(this.t * 6) > 0 ? C.gold : C.magenta);
 
     this.renderer.render(this.scene, this.camera);
   }

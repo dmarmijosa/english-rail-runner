@@ -100,6 +100,49 @@ button.big {
   animation: popIn .38s cubic-bezier(.34, 1.56, .64, 1) both;
 }
 
+.menu-link { display: block; margin: 8px auto 0; }
+
+/* achievements list */
+.ach-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(42, 157, 143, .12);
+    border-radius: 12px;
+    padding: 10px 14px;
+    animation: fadeUp .3s ease both;
+
+    &.locked { opacity: .5; filter: grayscale(0.6); }
+  }
+
+  .ach-icon { font-size: 26px; }
+  .ach-text { display: flex; flex-direction: column; }
+  .ach-text small { font-size: 12px; opacity: .75; }
+}
+
+/* newly-unlocked toast inside the summary */
+.ach-toast {
+  background: rgba(255, 197, 61, .18);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  animation: popIn .4s cubic-bezier(.34, 1.56, .64, 1) both;
+
+  .ach-toast-title { font-weight: bold; color: var(--amber); font-size: 14px; }
+  .ach-toast-row { font-size: 15px; margin-top: 4px; }
+  .ach-toast-row span { font-size: 20px; }
+}
+
 .levels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
