@@ -1,0 +1,7 @@
+{
+  "name": "english-rail-runner",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
