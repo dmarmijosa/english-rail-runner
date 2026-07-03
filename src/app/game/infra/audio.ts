@@ -1,4 +1,7 @@
-// Infra: WebAudio playback. Music ≈ −18 dBFS, SFX ≈ −11 dBFS (mix law).
+/**
+ * @fileoverview Infra: WebAudio playback of the generated clips.
+ * Mix law: music ≈ −18 dBFS, SFX ≈ −11 dBFS (gains below).
+ */
 const FILES: Record<string, string> = {
   music: 'assets/game/audio/music.mp3',
   jump: 'assets/game/audio/jump.mp3',
@@ -11,6 +14,11 @@ const GAIN: Record<string, number> = {
   music: 0.14, jump: 0.3, correct: 0.35, wrong: 0.3, coin: 0.25, levelup: 0.4,
 };
 
+/**
+ * Loads and plays the game's audio clips through a single AudioContext.
+ * `unlock()` must run inside a user gesture (browser autoplay policy);
+ * every other method is safe to call anytime and no-ops when locked.
+ */
 export class Sound {
   private ctx: AudioContext | null = null;
   private buffers: Record<string, AudioBuffer> = {};

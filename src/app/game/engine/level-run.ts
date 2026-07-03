@@ -1,5 +1,8 @@
-// Engine (application layer): one level run. Pure simulation over fixed
-// timesteps — no DOM, no Three.js, no Angular. Emits events through `hooks`.
+/**
+ * @fileoverview Engine (application layer): one level run. Pure simulation
+ * over fixed timesteps — no DOM, no Three.js, no Angular. Communicates
+ * outward only through {@link RunHooks} events and the {@link ViewModel}.
+ */
 import { LevelDef, LevelConfig, levelConfig } from '../domain/curriculum';
 import { Question, Rng, buildQuestions, mulberry32 } from '../domain/quiz';
 
@@ -68,6 +71,11 @@ export interface RunHooks {
   onFail?(result: RunResult): void;
 }
 
+/**
+ * One playable level attempt: hero physics (lanes, jump, slide), question
+ * gates, collisions, power-ups, the chasing drone and win/fail resolution.
+ * Deterministic given its seed; all randomness flows through one PRNG.
+ */
 export class LevelRun {
   readonly cfg: LevelConfig;
   readonly questions: Question[];
@@ -105,10 +113,27 @@ export class LevelRun {
   gantry: { d: number; text: string } | null = null;
   signState: (SignView | null)[] = [null, null, null];
 
-  constructor(private level: LevelDef, levelIndex: number, private hooks: RunHooks) {
+  /** Seed used for this run — kept public so a run can be reproduced exactly. */
+  readonly seed: number;
+
+  /**
+   * @param level      Level definition (unit + word pairs).
+   * @param levelIndex 0-based index into the curriculum (drives difficulty).
+   * @param hooks      Event callbacks toward the UI/audio layer.
+   * @param seed       RNG seed. Defaults to a per-run random value so question
+   *                   order, correct lanes and hazard layout differ on every
+   *                   attempt; pass a fixed seed to reproduce a run in tests.
+   */
+  constructor(
+    private level: LevelDef,
+    levelIndex: number,
+    private hooks: RunHooks,
+    seed: number = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0,
+  ) {
+    this.seed = seed;
     this.cfg = levelConfig(levelIndex);
-    this.rng = mulberry32(level.id * 7919 + 13);
-    this.questions = buildQuestions(level, level.id * 1337);
+    this.rng = mulberry32(seed ^ (level.id * 7919));
+    this.questions = buildQuestions(level, seed ^ (level.id * 1337));
     this.droneDist = this.cfg.droneStart;
     this.layoutTrack();
   }
@@ -159,6 +184,11 @@ export class LevelRun {
     return v;
   }
 
+  /**
+   * Advances the simulation one fixed step.
+   * @param dtMs     Step size in ms (always {@code 1000/60} from the loop).
+   * @param commands Player commands captured since the previous step.
+   */
   update(dtMs: number, commands: Command[]): void {
     if (this.over) return;
     const dt = dtMs / 1000;
@@ -346,6 +376,7 @@ export class LevelRun {
     }
   }
 
+  /** Snapshot for the renderer — plain data, no engine internals leak out. */
   view(): ViewModel {
     return {
       s: this.s,

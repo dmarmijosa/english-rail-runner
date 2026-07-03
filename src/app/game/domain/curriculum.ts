@@ -1,7 +1,10 @@
-// Domain data: 36 levels, basics → essentials. Pure data, no imports.
-// Each item: [es (prompt shown), en (correct answer)]. Distractors are drawn
-// from the same level by the quiz module, so they stay plausible.
+/**
+ * @fileoverview Domain data: 36 levels, basics → essentials. Pure data.
+ * Each item is [es (prompt shown), en (correct answer)]; distractors are
+ * drawn from the same level by the quiz module, so they stay plausible.
+ */
 
+/** One curriculum level: a themed unit of 8 word/phrase pairs. */
 export interface LevelDef {
   id: number;
   unit: string;
@@ -202,7 +205,10 @@ export const CURRICULUM: readonly LevelDef[] = [
   ]},
 ];
 
-// Track config per level index (0-based): speed and hazard density scale with progress.
+/**
+ * Track/difficulty config per level index (0-based): speed and hazard
+ * density scale with progress; the reading window is enforced downstream.
+ */
 export function levelConfig(i: number): LevelConfig {
   const tier = Math.floor(i / 6); // 0..5
   return {

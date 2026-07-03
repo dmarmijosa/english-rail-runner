@@ -15,8 +15,11 @@ _Registro de decisiones importantes, con contexto y consecuencias._
   `ViewModel` (estado de render por frame). Nada más cruza la frontera.
 
 ## D3 — Simulación a paso fijo con RNG sembrado (determinismo)
-- `LevelRun.update(16.6ms, cmds)` nunca depende del framerate. La misma semilla
-  (derivada del id de nivel) produce el mismo trazado y las mismas preguntas.
+- `LevelRun.update(16.6ms, cmds)` nunca depende del framerate. Toda la aleatoriedad fluye
+  por un PRNG sembrado; la misma semilla reproduce exactamente la misma partida.
+- **Actualización 2026-07-03**: la semilla ahora es aleatoria POR INTENTO (petición de Danny:
+  el orden de palabras/carriles no debe repetirse al rejugar). La reproducibilidad se
+  conserva pasando una semilla fija al constructor (`new LevelRun(level, i, hooks, seed)`).
 - Permite reproducir bugs y hacer fast-forward en tests (se usó en la verificación E2E).
 
 ## D4 — Bucle rAF fuera de NgZone + signals para el HUD
@@ -57,6 +60,14 @@ _Registro de decisiones importantes, con contexto y consecuencias._
 - La versión pre-migración sigue jugable en https://wavy-tree-721.higgsfield.gg/
   (game_id `f54a41b9-0b44-4ab2-90b0-4540bdab20fb`). Para actualizarla desde este proyecto:
   `npm run build`, añadir el stub `logic.js` a `www/`, zip y redesplegar CON ese game_id.
+
+## D12 — Mobile-first: gestos como control principal
+- La app es táctil: swipes **encadenados** (tras cada gesto el origen se resetea a la
+  posición actual del dedo, permitiendo mover + saltar en un mismo arrastre), tap = saltar,
+  háptica en cada gesto (@capacitor/haptics). La UI nunca menciona teclas; teclado y
+  gamepad siguen operativos como métodos secundarios (mismo stream de `Command`s).
+- El dron villano solo se materializa cuando la persecución es real (dd < 10) y vuela en
+  alto por el flanco del héroe — nunca entre la cámara y los carteles de respuesta.
 
 ## Patrones utilizados
 - **Capas concéntricas** (domain ← engine ← infra/ui), **View-Model plano** por frame,

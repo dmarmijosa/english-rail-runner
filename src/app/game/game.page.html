@@ -35,6 +35,13 @@
     @if (droneNear()) {
       <div class="hud-drone">{{ STR.droneWarning }}</div>
     }
+    @if (showHint()) {
+      <div class="gesture-hint">
+        <div class="gh"><span class="gh-icon">↔️</span>{{ STR.hintMove }}</div>
+        <div class="gh"><span class="gh-icon">⬆️</span>{{ STR.hintJump }}</div>
+        <div class="gh"><span class="gh-icon">⬇️</span>{{ STR.hintSlide }}</div>
+      </div>
+    }
     <button class="btn-pause" (click)="pause()">⏸</button>
   </div>
 }
@@ -50,7 +57,7 @@
         @if (learnedCount() > 0) {
           ⭐ {{ learnedCount() }} {{ STR.totalWords }}
         } @else {
-          {{ STR.controlsDesktop }}
+          👆 {{ STR.controlsTouch }}
         }
       </p>
     </div>
@@ -91,7 +98,7 @@
       <h3>{{ STR.wordsLearned }}</h3>
       <ul class="summary-words">
         @for (w of sm.result.correctWords; track w.en) {
-          <li><b>{{ w.en }}</b><span>{{ w.es }}</span></li>
+          <li (click)="say(w.en)"><b>🔊 {{ w.en }}</b><span>{{ w.es }}</span></li>
         }
       </ul>
       <div class="btn-row">

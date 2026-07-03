@@ -1,7 +1,14 @@
+/**
+ * @fileoverview UI layer: the single game page. Hosts the Three.js canvas,
+ * runs the fixed-timestep loop outside NgZone, and renders every overlay
+ * (menu, level select, HUD, summary, failed, paused) from Angular signals.
+ * Mobile-first: touch gestures are the primary input, with haptic feedback.
+ */
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone,
   OnDestroy, computed, signal, viewChild,
 } from '@angular/core';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 import { STR } from './strings';
 import { CURRICULUM, LevelDef } from './domain/curriculum';
@@ -10,10 +17,13 @@ import { Command, LevelRun, PowerKind, ROOF, RunResult, ViewModel } from './engi
 import { GameScene } from './infra/scene';
 import { GameInput } from './infra/input';
 import { Sound } from './infra/audio';
+import { Speech } from './infra/tts';
 import { loadProgress, saveProgress } from './infra/storage';
 
+/** Top-level UI state of the page. */
 type Mode = 'menu' | 'levels' | 'run' | 'paused' | 'summary' | 'failed';
 
+/** Level-select card view model. */
 interface LevelCard {
   index: number;
   id: number;
@@ -22,20 +32,30 @@ interface LevelCard {
   stars: number;
 }
 
+/** End-of-level summary view model. */
 interface SummaryVM {
   result: RunResult;
   stars: number;
   isLast: boolean;
 }
 
+/** Fixed simulation step in ms (60 Hz). */
 const STEP = 1000 / 60;
+/** How long the gesture hint overlay stays on screen (ms). */
+const HINT_MS = 4200;
 
+/** Idle backdrop shown behind menus (gentle scroll, no entities). */
 const IDLE_VIEW: ViewModel = {
   s: 0, speed: 8, heroX: 0, heroY: ROOF, heroState: 'run', heroRoll: 0,
   entities: [], signs: [null, null, null], gantry: null, metaD: null,
   droneDist: 99, effects: { slow: false, shake: 0 },
 };
 
+/**
+ * The game page. Owns the engine instances ({@link LevelRun}, {@link GameScene},
+ * {@link GameInput}, {@link Sound}, {@link Speech}) and exposes their state to
+ * the template exclusively through signals (OnPush change detection).
+ */
 @Component({
   selector: 'app-game',
   standalone: true,
@@ -61,10 +81,13 @@ export class GamePage implements AfterViewInit, OnDestroy {
   readonly levelId = signal(1);
   readonly unitName = signal('');
   readonly summary = signal<SummaryVM | null>(null);
+  readonly showHint = signal(false);
   readonly devInfo = signal('');
 
   private readonly progress = signal<Progress>(loadProgress());
+  /** Total distinct English words learned across all levels. */
   readonly learnedCount = computed(() => Object.keys(this.progress().learned).length);
+  /** Level-select cards derived from progress (locks + stars). */
   readonly levelCards = computed<LevelCard[]>(() => {
     const p = this.progress();
     return CURRICULUM.map((lvl, index) => ({
@@ -73,12 +96,14 @@ export class GamePage implements AfterViewInit, OnDestroy {
       stars: p.stars[lvl.id] || 0,
     }));
   });
+  /** Dev overlay enabled with `?dev=1`. */
   readonly dev = new URLSearchParams(location.search).has('dev');
 
   // ——— engine ———
   private scene: GameScene | null = null;
   private input: GameInput | null = null;
   private readonly sound = new Sound();
+  private readonly speech = new Speech();
   private run: LevelRun | null = null;
   private levelIndex = 0;
   private rafId = 0;
@@ -90,6 +115,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
   private fpsAt = 0;
   private feedbackTimer: ReturnType<typeof setTimeout> | null = null;
   private powerTimer: ReturnType<typeof setTimeout> | null = null;
+  private hintTimer: ReturnType<typeof setTimeout> | null = null;
   private audioUnlocked = false;
 
   private readonly onBlur = () => {
@@ -104,12 +130,26 @@ export class GamePage implements AfterViewInit, OnDestroy {
     if (this.mode() === 'run') this.sound.startMusic();
   };
 
-  constructor(private zone: NgZone) {}
+  constructor(private zone: NgZone) {
+    if (this.dev) {
+      // dev-only hook for automated verification (?dev=1)
+      const page = this;
+      (window as unknown as { __rail?: unknown }).__rail = {
+        startLevel: (i: number) => page.zone.run(() => page.startLevel(i)),
+        get run() { return page['run']; },
+      };
+    }
+  }
 
+  /** Boots renderer + input and starts the rAF loop outside Angular. */
   ngAfterViewInit(): void {
     this.zone.runOutsideAngular(() => {
       this.scene = new GameScene(this.canvasRef().nativeElement);
       this.input = new GameInput(document.body);
+      // gentle haptic tick on every recognized gesture (mobile feel)
+      this.input.onGesture = () => {
+        void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+      };
       addEventListener('blur', this.onBlur);
       addEventListener('pointerdown', this.onFirstGesture);
       addEventListener('keydown', this.onFirstGesture);
@@ -123,6 +163,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
     });
   }
 
+  /** Symmetric cleanup of listeners, loop, audio and timers. */
   ngOnDestroy(): void {
     cancelAnimationFrame(this.rafId);
     removeEventListener('blur', this.onBlur);
@@ -131,8 +172,9 @@ export class GamePage implements AfterViewInit, OnDestroy {
     this.input?.dispose();
     this.scene?.dispose();
     this.sound.stopMusic();
-    if (this.feedbackTimer) clearTimeout(this.feedbackTimer);
-    if (this.powerTimer) clearTimeout(this.powerTimer);
+    for (const t of [this.feedbackTimer, this.powerTimer, this.hintTimer]) {
+      if (t) clearTimeout(t);
+    }
   }
 
   // ——— fixed-timestep loop (runs outside Angular) ———
@@ -182,22 +224,35 @@ export class GamePage implements AfterViewInit, OnDestroy {
 
   // ——— user actions ———
   showLevels(): void { this.mode.set('levels'); }
+
   toMenu(): void {
     this.mode.set('menu');
     this.run = null;
     this.sound.stopMusic();
   }
+
   resume(): void {
     this.mode.set('run');
     this.last = performance.now();
   }
+
   pause(): void { if (this.mode() === 'run') this.mode.set('paused'); }
+
   retry(): void { this.startLevel(this.levelIndex); }
+
   next(): void {
     if (this.levelIndex + 1 < CURRICULUM.length) this.startLevel(this.levelIndex + 1);
     else this.toMenu();
   }
 
+  /** Pronounces an English word (used by the summary word chips). */
+  say(text: string): void { this.speech.speak(text); }
+
+  /**
+   * Creates a fresh {@link LevelRun} (new random seed each attempt) and
+   * switches the page into run mode.
+   * @param index 0-based curriculum index.
+   */
   startLevel(index: number): void {
     const level: LevelDef = CURRICULUM[index];
     this.levelIndex = index;
@@ -211,14 +266,19 @@ export class GamePage implements AfterViewInit, OnDestroy {
     this.feedback.set(null);
     this.powerLabel.set('');
     this.droneNear.set(false);
+    this.showHint.set(true);
+    if (this.hintTimer) clearTimeout(this.hintTimer);
+    this.hintTimer = setTimeout(() => this.zone.run(() => this.showHint.set(false)), HINT_MS);
 
     const z = (fn: () => void) => this.zone.run(fn);
     this.run = new LevelRun(level, index, {
       onJump: () => this.sound.play('jump'),
       onCoin: (n) => { z(() => this.coins.set(n)); this.sound.play('coin'); },
       onQuestion: (q) => z(() => this.phrase.set(q.es)),
-      onCorrect: (_q, mult) => {
+      onCorrect: (q, mult) => {
         this.sound.play('correct');
+        this.speech.speak(q.en); // pronounce what was just learned
+        void Haptics.notification({ type: NotificationType.Success }).catch(() => undefined);
         z(() => {
           this.flash(`${STR.correct} +${100 * mult}`, 'good');
           this.score.set(this.run!.score);
@@ -228,6 +288,7 @@ export class GamePage implements AfterViewInit, OnDestroy {
       },
       onWrong: (q) => {
         this.sound.play('wrong');
+        void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => undefined);
         z(() => {
           this.flash(`${STR.wrong} "${q.en}"`, 'bad');
           this.streak.set(0);
@@ -235,6 +296,9 @@ export class GamePage implements AfterViewInit, OnDestroy {
       },
       onHeart: (n) => z(() => this.hearts.set(n)),
       onShieldSave: () => z(() => this.flash(STR.powerShield, 'good')),
+      onObstacle: () => {
+        void Haptics.impact({ style: ImpactStyle.Medium }).catch(() => undefined);
+      },
       onRamp: () => this.sound.play('jump'),
       onPower: (kind) => z(() => this.showPower(kind)),
       onFinish: (result) => {
@@ -261,12 +325,14 @@ export class GamePage implements AfterViewInit, OnDestroy {
     if (this.audioUnlocked) this.sound.startMusic();
   }
 
+  /** Shows a transient center-screen feedback pill. */
   private flash(text: string, kind: 'good' | 'bad'): void {
     this.feedback.set({ text, kind });
     if (this.feedbackTimer) clearTimeout(this.feedbackTimer);
     this.feedbackTimer = setTimeout(() => this.zone.run(() => this.feedback.set(null)), 1400);
   }
 
+  /** Shows the transient power-up label. */
   private showPower(kind: PowerKind): void {
     const map: Record<PowerKind, string> = {
       shield: STR.powerShield, magnet: STR.powerMagnet, slow: STR.powerSlow, x2: STR.powerX2,
@@ -276,11 +342,13 @@ export class GamePage implements AfterViewInit, OnDestroy {
     this.powerTimer = setTimeout(() => this.zone.run(() => this.powerLabel.set('')), 2200);
   }
 
+  /** ❤️🖤 heart row for the HUD. */
   heartsDisplay(): string {
     const n = Math.max(0, this.hearts());
     return '❤️'.repeat(n) + '🖤'.repeat(Math.max(0, 3 - n));
   }
 
+  /** ★★☆ star row for cards and the summary. */
   starsDisplay(stars: number): string {
     return '★'.repeat(stars) + '☆'.repeat(3 - stars);
   }

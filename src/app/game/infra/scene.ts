@@ -1,5 +1,8 @@
-// Infra: Three.js scene. Consumes a plain ViewModel from the engine —
-// no game rules live here. Style constants derive from STYLE FORMULA v1.
+/**
+ * @fileoverview Infra: the Three.js scene. Consumes a plain {@link ViewModel}
+ * from the engine each frame — no game rules live here. Colors, lighting and
+ * fog derive from the approved STYLE FORMULA v1 (design/plan.md).
+ */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ViewModel } from '../engine/level-run';
@@ -29,51 +32,85 @@ function matte(color: number): THREE.MeshLambertMaterial {
 }
 
 // ——— canvas signboard texture ———
+
+/**
+ * Answer signboard: a rounded, gradient-filled canvas texture on a plane,
+ * mounted on a pole. `setText` re-paints the canvas; the render loop drives
+ * a pop-in scale animation via {@link SignBoard.appearAt}.
+ */
 class SignBoard {
   canvas = document.createElement('canvas');
   tex: THREE.CanvasTexture;
   mesh = new THREE.Group();
   lastText = '';
   lastState = '';
+  /** Scene time (s) at which the board became visible — drives the pop-in. */
+  appearAt = -1;
 
+  /** @param poleLen Pole length in world units (longer for higher lanes). */
   constructor(poleLen = 1.6) {
-    this.canvas.width = 512; this.canvas.height = 220;
+    this.canvas.width = 512; this.canvas.height = 240;
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.anisotropy = 4;
-    const mat = new THREE.MeshBasicMaterial({ map: this.tex, transparent: false, fog: false });
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.0), mat);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(4.7, 2.1, 0.18), matte(C.charcoal));
-    back.position.z = -0.1;
+    const mat = new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, fog: false });
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.15), mat);
+    // soft dark backing slightly behind, for depth
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(4.75, 2.3),
+      new THREE.MeshBasicMaterial({ color: C.charcoal, transparent: true, opacity: 0.35, fog: false }));
+    back.position.z = -0.06;
     const pole = new THREE.Mesh(new THREE.BoxGeometry(0.22, poleLen, 0.22), matte(C.charcoal));
     pole.position.y = -(1.0 + poleLen / 2);
     this.mesh.add(back, pole, board);
     this.setText('');
   }
 
+  /**
+   * Repaints the board.
+   * @param text  English answer option (word or phrase).
+   * @param state Visual state: normal (cream), correct (gold + ✓), wrong (magenta + ✗).
+   */
   setText(text: string, state: 'normal' | 'correct' | 'wrong' = 'normal'): void {
     const ctx = this.canvas.getContext('2d')!;
-    const bg = state === 'correct' ? '#ffc53d' : state === 'wrong' ? '#e63966' : '#fff3dd';
+    const W = 512, H = 240, R = 30;
+    ctx.clearRect(0, 0, W, H);
+    // rounded card with a vertical gradient per state
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    if (state === 'correct') { grad.addColorStop(0, '#ffd76a'); grad.addColorStop(1, '#ffb92e'); }
+    else if (state === 'wrong') { grad.addColorStop(0, '#f0507a'); grad.addColorStop(1, '#d22a56'); }
+    else { grad.addColorStop(0, '#fffaf0'); grad.addColorStop(1, '#ffe9c4'); }
+    ctx.beginPath();
+    ctx.roundRect(6, 6, W - 12, H - 12, R);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = state === 'wrong' ? '#8f1737' : state === 'correct' ? '#a86a00' : '#2a9d8f';
+    ctx.stroke();
+    // inner hairline for a finished look
+    ctx.beginPath();
+    ctx.roundRect(16, 16, W - 32, H - 32, R - 10);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(58,51,53,0.18)';
+    ctx.stroke();
+
     const fg = state === 'wrong' ? '#fff3dd' : '#3a3335';
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 512, 220);
-    ctx.strokeStyle = '#3a3335'; ctx.lineWidth = 14;
-    ctx.strokeRect(7, 7, 498, 206);
     ctx.fillStyle = fg;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const mark = state === 'correct' ? '✓ ' : state === 'wrong' ? '✗ ' : '';
+    const label = mark + text;
     const font = (s: number) => `bold ${s}px 'Trebuchet MS', sans-serif`;
-    let size = 64;
+    let size = 62;
     ctx.font = font(size);
-    if (ctx.measureText(text).width <= 460) {
-      ctx.fillText(text, 256, 112);
+    if (ctx.measureText(label).width <= 440) {
+      ctx.fillText(label, 256, 122);
     } else {
       // shrink first; if still too wide, wrap into two balanced lines
-      while (ctx.measureText(text).width > 460 && size > 44) {
+      while (ctx.measureText(label).width > 440 && size > 44) {
         size -= 4; ctx.font = font(size);
       }
-      if (ctx.measureText(text).width <= 460) {
-        ctx.fillText(text, 256, 112);
+      if (ctx.measureText(label).width <= 440) {
+        ctx.fillText(label, 256, 122);
       } else {
-        const words = text.split(' ');
+        const words = label.split(' ');
         let best = 1, bestDiff = Infinity;
         for (let i = 1; i < words.length; i++) {
           const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
@@ -81,12 +118,12 @@ class SignBoard {
           if (diff < bestDiff) { bestDiff = diff; best = i; }
         }
         const l1 = words.slice(0, best).join(' '), l2 = words.slice(best).join(' ');
-        size = 52; ctx.font = font(size);
-        while ((ctx.measureText(l1).width > 460 || ctx.measureText(l2).width > 460) && size > 24) {
+        size = 50; ctx.font = font(size);
+        while ((ctx.measureText(l1).width > 440 || ctx.measureText(l2).width > 440) && size > 24) {
           size -= 3; ctx.font = font(size);
         }
-        ctx.fillText(l1, 256, 70);
-        ctx.fillText(l2, 256, 152);
+        ctx.fillText(l1, 256, 80);
+        ctx.fillText(l2, 256, 162);
       }
     }
     this.tex.needsUpdate = true;
@@ -136,23 +173,51 @@ function makeRamp(): THREE.Group {
   g.add(m, stripe);
   return g;
 }
+/**
+ * Builds the villain inspector drone: rounded magenta body, glossy teal eye,
+ * four rotor pods whose blades spin around their own axis, and a blinking
+ * warning lamp on an antenna. All parts follow STYLE FORMULA v1 colors.
+ */
 function makeDrone(): THREE.Group {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 10), matte(C.magenta));
-  body.scale.y = 0.72;
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 10),
-    new THREE.MeshBasicMaterial({ color: 0x9ef7ee }));
-  eye.position.set(0, 0.05, -0.62);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.09, 8, 20), matte(C.charcoal));
-  ring.rotation.x = Math.PI / 2;
-  const props = new THREE.Group();
+  // body: squashed sphere with a charcoal belly band
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.72, 16, 12), matte(C.magenta));
+  body.scale.set(1.1, 0.78, 1.0);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.73, 0.10, 8, 24), matte(C.charcoal));
+  band.rotation.x = Math.PI / 2;
+  // eye: white socket + emissive teal pupil looking at the hero
+  const socket = new THREE.Mesh(new THREE.SphereGeometry(0.30, 12, 10), matte(C.cream));
+  socket.position.set(0, 0.04, -0.56);
+  const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0x5ff2e4 }));
+  pupil.position.set(0, 0.04, -0.76);
+  // antenna with blinking warning lamp
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 6), matte(C.charcoal));
+  antenna.position.y = 0.75;
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8),
+    new THREE.MeshBasicMaterial({ color: C.gold }));
+  lamp.position.y = 1.02;
+  // four rotor pods; each blade set spins around its own pivot
+  const rotors: THREE.Group[] = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.14), matte(C.charcoal));
-    blade.position.set(sx * 1.0, 0.35, sz * 1.0);
-    props.add(blade);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.14), matte(C.charcoal));
+    arm.position.set(sx * 0.72, 0.22, sz * 0.55);
+    arm.rotation.y = sz * sx * 0.6;
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.13, 0.16, 8), matte(C.charcoal));
+    pod.position.set(sx * 1.0, 0.30, sz * 0.78);
+    const pivot = new THREE.Group();
+    pivot.position.set(sx * 1.0, 0.40, sz * 0.78);
+    const bladeA = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.03, 0.10), matte(0x6b5f62));
+    const bladeB = bladeA.clone(); bladeB.rotation.y = Math.PI / 2;
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.40, 0.01, 16),
+      new THREE.MeshBasicMaterial({ color: C.charcoal, transparent: true, opacity: 0.15 }));
+    pivot.add(bladeA, bladeB, disc);
+    rotors.push(pivot);
+    g.add(arm, pod, pivot);
   }
-  g.add(body, eye, ring, props);
-  g.userData['props'] = props;
+  g.add(body, band, socket, pupil, antenna, lamp);
+  g.userData['rotors'] = rotors;
+  g.userData['lamp'] = lamp;
   return g;
 }
 function makeProceduralHero(): THREE.Group {
@@ -193,6 +258,11 @@ function makeProceduralWagon(variant: number): THREE.Group {
   return g;
 }
 
+/**
+ * Owns the renderer, camera, lights and every pooled world object (wagons,
+ * coins, obstacles, signs, drone, hero). `render(view, dt)` applies a
+ * ViewModel and draws one frame; nothing here mutates game state.
+ */
 export class GameScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -429,10 +499,10 @@ export class GameScene {
     const loader = new GLTFLoader();
     loader.load(`${ASSETS}/models/hero.glb`, (gltf) => {
       const model = gltf.scene;
-      // normalize height to ~1.7 and face -Z (run direction)
+      // normalize height to ~1.85 and face -Z (run direction)
       const box = new THREE.Box3().setFromObject(model);
       const h = box.max.y - box.min.y;
-      const s = 1.7 / h;
+      const s = 1.85 / h;
       model.scale.setScalar(s);
       model.position.y = -box.min.y * s;
       model.rotation.y = Math.PI;
@@ -497,16 +567,21 @@ export class GameScene {
     }, undefined, () => { /* procedural wagons stay */ });
   }
 
-  // ——— per-frame view application ———
+  /**
+   * Applies a ViewModel and draws one frame.
+   * @param view Snapshot of the simulation (hero, entities, signs, drone…).
+   * @param dtMs Wall-clock delta since the previous frame, for cosmetic motion.
+   */
   render(view: ViewModel, dtMs: number): void {
     const dt = dtMs / 1000;
     this.t += dt;
     const s = view.s;
 
-    // hero (+0.28: the barrel roof is curved and the GLB bbox bottom is the
-    // tail tip, not the feet — without the offset the feet sink into the roof)
+    // hero (+0.42: the barrel roof is curved and the GLB bbox bottom is the
+    // tail tip, not the feet — without the offset the feet sink into the
+    // roof ribs and disappear from the chase-camera angle)
     const hx = view.heroX * LANE_X;
-    this.heroGroup.position.set(hx, view.heroY + 0.28, 0);
+    this.heroGroup.position.set(hx, view.heroY + 0.42, 0);
     const lean = view.heroState === 'jump' ? 0.25 : view.heroState === 'slide' ? -0.9 : 0;
     this.heroGroup.rotation.x = THREE.MathUtils.lerp(this.heroGroup.rotation.x, lean, 0.2);
     this.heroGroup.rotation.z = THREE.MathUtils.lerp(this.heroGroup.rotation.z, view.heroRoll || 0, 0.25);
@@ -614,16 +689,22 @@ export class GameScene {
     for (let i = rampI; i < this.rampPool.length; i++) this.rampPool[i].visible = false;
     for (let i = powerI; i < this.powerPool.length; i++) this.powerPool[i].visible = false;
 
-    // answer signs
+    // answer signs (pop-in animation with a slight overshoot when they appear)
     for (let i = 0; i < 3; i++) {
       const sign = this.signs[i];
       const q = view.signs[i];
-      if (!q) { sign.mesh.visible = false; continue; }
+      if (!q) { sign.mesh.visible = false; sign.appearAt = -1; continue; }
       const z = -(q.d - s);
-      if (z < -DRAW_DIST || z > 2.5) { sign.mesh.visible = false; continue; }
+      if (z < -DRAW_DIST || z > 2.5) { sign.mesh.visible = false; sign.appearAt = -1; continue; }
+      if (!sign.mesh.visible) sign.appearAt = this.t;
       sign.mesh.visible = true;
-      // staggered heights per lane so wide boards never overlap visually
-      sign.mesh.position.set(q.lane * LANE_X, ROOF_Y + 1.95 + (q.lane + 1) * 1.05, z);
+      const pop = Math.min(1, (this.t - sign.appearAt) / 0.35);
+      const scale = pop < 1 ? 0.6 + 0.4 * pop + 0.12 * Math.sin(pop * Math.PI) : 1;
+      sign.mesh.scale.setScalar(scale);
+      // staggered heights per lane so wide boards never overlap visually,
+      // plus a gentle float so they feel alive
+      const floatY = Math.sin(this.t * 2 + i * 2.1) * 0.08;
+      sign.mesh.position.set(q.lane * LANE_X, ROOF_Y + 1.95 + (q.lane + 1) * 1.05 + floatY, z);
       if (sign.lastText !== q.text || sign.lastState !== q.state) {
         sign.setText(q.text, q.state);
         sign.lastText = q.text; sign.lastState = q.state;
@@ -648,19 +729,31 @@ export class GameScene {
       this.meta.group.position.z = z;
     } else this.meta.group.visible = false;
 
-    // drone: hovers behind, closes in with view.droneDist
+    // drone: appears only when the chase is real (dd < 10) and flies high at
+    // the hero's flank, swooping closer as dd shrinks — menacing without ever
+    // blocking the camera or covering the answer signs
     const dd = view.droneDist;
-    this.drone.position.set(
-      hx * 0.6 + Math.sin(this.t * 1.7) * 0.8,
-      ROOF_Y + 1.6 + Math.sin(this.t * 2.3) * 0.35,
-      2.5 + dd * 0.45);
-    this.drone.rotation.y = Math.sin(this.t * 1.1) * 0.2;
-    (this.drone.userData['props'] as THREE.Group).rotation.y = this.t * 20;
-    this.drone.visible = dd < 34;
+    this.drone.visible = dd < 10;
+    if (this.drone.visible) {
+      const closeness = 1 - dd / 10; // 0 = far, 1 = about to catch
+      this.drone.position.set(
+        hx * 0.6 + 2.2 - closeness * 1.6 + Math.sin(this.t * 1.7) * 0.35,
+        ROOF_Y + 2.4 - closeness * 0.9 + Math.sin(this.t * 2.3) * 0.25,
+        2.0 + dd * 0.35);
+      this.drone.scale.setScalar(0.8);
+      this.drone.rotation.y = Math.sin(this.t * 1.1) * 0.2;
+      this.drone.rotation.x = 0.18; // leaning toward its prey
+      for (const rotor of this.drone.userData['rotors'] as THREE.Group[]) {
+        rotor.rotation.y = this.t * 26;
+      }
+      (this.drone.userData['lamp'] as THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>)
+        .material.color.setHex(Math.sin(this.t * 6) > 0 ? C.gold : C.magenta);
+    }
 
     this.renderer.render(this.scene, this.camera);
   }
 
+  /** Draw-call / triangle counters for the `?dev=1` overlay. */
   info(): { calls: number; triangles: number } {
     const r = this.renderer.info.render;
     return { calls: r.calls, triangles: r.triangles };

@@ -251,4 +251,115 @@ button.big {
   }
 }
 
-.fail-emoji { font-size: 54px; }
+.fail-emoji { font-size: 54px; animation: shake .5s ease .1s; }
+
+/* ——— gesture hint overlay (mobile onboarding) ——— */
+.gesture-hint {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(58, 51, 53, .62);
+  border-radius: 16px;
+  padding: 12px 18px;
+  animation: hintIn .4s ease both, fadeAway .6s ease 3.4s both;
+
+  .gh {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--cream);
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  }
+
+  .gh-icon { font-size: 20px; }
+}
+
+/* ——— animations & transitions ——— */
+.screen { animation: fadeIn .22s ease both; }
+
+.card { animation: popIn .38s cubic-bezier(.34, 1.56, .64, 1) both; }
+
+.hud-phrase { animation: dropIn .45s cubic-bezier(.34, 1.56, .64, 1) both; }
+
+.feedback { animation: popFeedback .28s cubic-bezier(.34, 1.56, .64, 1) both; }
+
+.hud-power { animation: fadeUp .35s ease both; }
+
+.summary-stars { animation: starPop .55s cubic-bezier(.34, 1.8, .64, 1) .15s both; }
+
+.summary-words li {
+  animation: fadeUp .3s ease both;
+  cursor: pointer;
+  transition: transform .12s ease, background .12s ease;
+
+  &:active { transform: scale(.96); background: rgba(42, 157, 143, .28); }
+
+  @for $i from 1 through 8 {
+    &:nth-child(#{$i}) { animation-delay: #{80 * $i}ms; }
+  }
+}
+
+.lvl {
+  transition: transform .12s ease, box-shadow .12s ease;
+
+  &:not(.locked):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 rgba(58, 51, 53, .25);
+  }
+}
+
+button.big { transition: transform .1s ease, filter .1s ease; }
+button.big:not(.ghost):hover { filter: brightness(1.05); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeAway {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.82); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translate(-50%, -18px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes starPop {
+  from { opacity: 0; transform: scale(.3) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes popFeedback {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes hintIn {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}

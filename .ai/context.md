@@ -1,8 +1,19 @@
 # Estado actual del desarrollo
 
-_Actualizado: 2026-07-03_
+_Actualizado: 2026-07-03 (2ª iteración: mobile-first)_
 
-## Hito recién completado
+## Iteración mobile-first (última)
+- Gestos táctiles encadenados como control principal + háptica; UI sin menciones de teclado;
+  hint de gestos al arrancar nivel.
+- Dron rediseñado (rotores, ojo, lámpara) y reposicionado (solo visible con dd < 10, en alto
+  por el flanco); pies del héroe plantados (+0.42); carteles redondeados con degradado,
+  ✓/✗ y pop-in; animaciones/transiciones en toda la UI.
+- Orden de preguntas y carril correcto aleatorios por partida (semilla por intento).
+- TTS de pronunciación al acertar y al tocar palabras del resumen (backlog cumplido).
+- JSDoc en todo el código del juego + README.md.
+- Gancho dev: `?dev=1` expone `window.__rail` (startLevel/run) para verificación automatizada.
+
+## Hito anterior
 Migración completa del juego (antes web vanilla con Three.js) a **Ionic + Angular 20**:
 - Motor en TS bajo `src/app/game/` (domain/engine/infra), UI como `GamePage` con signals.
 - Assets movidos a `src/assets/game/`. Base web antigua eliminada.

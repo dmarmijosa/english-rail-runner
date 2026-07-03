@@ -1,19 +1,23 @@
 # Backlog
 
-_Última actualización: 2026-07-03_
+_Última actualización: 2026-07-03 (2ª iteración)_
+
+## Completado recientemente
+- ✅ Pronunciación TTS (Web Speech API) al acertar + palabras del resumen tocables (2026-07-03).
+- ✅ Haptics con `@capacitor/haptics`: gestos, aciertos, fallos y golpes (2026-07-03).
+- ✅ Orden aleatorio de preguntas/carriles por partida (semilla por intento) (2026-07-03).
 
 ## Mejoras futuras
 - Héroe con esqueleto real: regenerar el concepto con piernas más largas/separadas (el auto-rig
   humanoide de Meshy rechazó las proporciones actuales, 2 intentos gastados) o rig procedural
   en Blender headless. Hoy corre con animación procedural (bob + balanceo) en `infra/scene.ts`.
 - Clips de salto y tropiezo dedicados cuando exista rig.
-- Pronunciación: TTS de la palabra correcta al acertar (Web Speech API, offline en iOS).
 - Modo repaso: re-jugar solo las palabras falladas (se registran en `Progress.learned`).
 - Tienda cosmética con las monedas (skins del zorro) — hoy solo puntúan.
 - Logros (racha perfecta, nivel sin daño, 100 palabras).
 - Variedad visual por tier: skybox nocturno/nevado en tiers altos (requiere nueva STYLE FORMULA parcial).
-- Haptics con `@capacitor/haptics` (ya instalado): vibración al acertar/fallar.
 - i18n del UI: `strings.ts` es intercambiable; añadir modo invertido EN→ES.
+- Ajuste fino del tamaño/coreografía del dron cuando está muy cerca (dd < 3).
 
 ## Bugs encontrados
 - (menor) El dron puede solaparse con la cámara cuando droneDist < 4.
