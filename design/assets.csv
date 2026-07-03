@@ -1,0 +1,19 @@
+id,role,type,description,size/ratio,style line ref,source
+hero_mesh,player character (third-person runner),3d_model_glb,"chunky rounded cartoon fox adventurer in cobalt-and-cream travel gear with small backpack, standing neutral pose, three-quarter isometric concept image on pure flat white then image-to-3D",~8000 polys,STYLE FORMULA v1,generate
+wagon_a_mesh,answer wagon variant A (players land on its flat roof),3d_model_glb,"stylized rounded train freight wagon, warm amber wood panels with teal metal trim, flat walkable roof platform, chunky wheels, three-quarter isometric concept on pure flat white then image-to-3D",~8000 polys,STYLE FORMULA v1,generate
+wagon_b_mesh,answer wagon variant B (visual variety),procedural_3d,"variant of wagon_a_mesh: reuse the generated mesh with teal/amber tint swap and roof prop differences done in code (budget decision: 30 credits saved)",n/a,STYLE FORMULA v1,procedural
+villain_mesh,chasing villain (inspector drone that closes in on mistakes),procedural_3d,"hot magenta-red robot inspector drone built from Three.js primitives (rounded body sphere, one big lens eye, spinning propellers) — per 3d-animation.md decision table for non-rigged drones",n/a,STYLE FORMULA v1,procedural
+sky_panorama,background sky dome / horizon backdrop,image,"wide sunset-desert horizon with distant mesas and teal sky, painterly soft gradients, no characters, muted detail",16:9 1k,STYLE FORMULA v1,generate
+ground_tile,seamless desert ground texture beside the tracks,tileable_texture,"seamless tileable sandy desert ground with sparse pebbles and dry grass tufts, uniform pattern density",1:1 1k seamless,STYLE FORMULA v1,generate
+rails_geometry,train rails and sleepers,procedural_3d,"low-poly rails + sleepers built from Three.js primitives, colors from formula palette (charcoal steel, amber wood)",n/a,STYLE FORMULA v1,procedural
+word_labels,English word signs on each wagon,procedural_texture,"canvas-drawn rounded signboard textures with the answer word, cream board with charcoal text, golden glow on correct-feedback",dynamic,STYLE FORMULA v1,procedural
+ui_icons,HUD icons (coin star heart shield magnet clock),procedural_svg,"flat rounded vector icons drawn in code, golden-yellow pickups, magenta hazards, cream chrome",n/a,STYLE FORMULA v1,procedural
+coin_pickup,collectible coin,procedural_3d,"low-poly golden coin cylinder with emissive rim, spins in place",n/a,STYLE FORMULA v1,procedural
+music_loop,background music,audio,"upbeat cheerful adventure loop, light percussion and marimba, ~60s seamless loop",~60s loop,n/a,generate
+sfx_jump,jump sound,audio,"short cartoon hop whoosh",<1s,n/a,generate
+sfx_correct,correct answer landing,audio,"bright ascending chime, rewarding",<2s,n/a,generate
+sfx_wrong,wrong answer stumble,audio,"soft descending buzzer, not punishing",<2s,n/a,generate
+sfx_coin,coin pickup,audio,"tiny sparkling ding",<1s,n/a,generate
+sfx_levelup,level complete fanfare,audio,"short victory fanfare with bells",<3s,n/a,generate
+thumbnail,marketplace/OG cover,image,"hero fox mid-jump between two train wagon roofs with English word signs, sunset desert, dynamic angle",16:9 1k,STYLE FORMULA v1,generate
+favicon,site favicon / catalog icon,image,"hero fox head over a golden coin badge, centered, simple",1:1 1k,STYLE FORMULA v1,generate
